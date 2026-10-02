@@ -379,6 +379,7 @@ define(['pipAPI','pipScorer','underscore'], function(APIConstructor, Scorer, _) 
 		API.addSettings('base_url',piCurrent.base_url);
 		API.addSettings('hooks',{
 				endTask: function(){
+					if (window.finishIatOrientation) window.finishIatOrientation();
 					var DScoreObj = scorer.computeD();
 					piCurrent.feedback = DScoreObj.FBMsg;
 					piCurrent.d = DScoreObj.DScore; //YBYB: Added on 28March2017

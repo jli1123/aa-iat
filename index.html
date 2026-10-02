@@ -22,6 +22,12 @@
             .exit-message { max-width: 700px; margin: 10vh auto; padding: 15px; text-align: center; }
             .exit-message p { margin-top: 1.5em; font-size: 1.3em; line-height: 1.5; }
             [hidden] { display: none !important; }
+            #iat-orientation-overlay { display: none; position: fixed; inset: 0; z-index: 100000; align-items: center; justify-content: center; padding: 24px; background: #fff; text-align: center; }
+            #iat-orientation-overlay.is-visible { display: flex; }
+            .iat-orientation-message { max-width: 520px; padding: 28px 24px; border: 1px solid #bce8f1; border-radius: 4px; background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12); }
+            .iat-orientation-message strong { display: block; margin-bottom: 10px; color: #31708f; font-size: 1.8em; line-height: 1.25; }
+            .iat-orientation-message span { display: block; font-size: 1.15em; line-height: 1.5; }
+            body.iat-orientation-blocked { overflow: hidden; touch-action: none; }
             @media (max-width: 600px) {
                 html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
                 body { font-size: 16px; }
@@ -179,6 +185,106 @@
                     window.showStudyExitPage(screeningExitMessage);
                 };
 
+                var iatOrientationActive = false;
+                var iatOrientationContinue = null;
+                var iatOrientationOverlay = null;
+
+                function isTouchDevice() {
+                    return (navigator.maxTouchPoints || 0) > 0 ||
+                        (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+                }
+
+                function isLandscape() {
+                    return window.innerWidth > window.innerHeight;
+                }
+
+                function getIatOrientationOverlay() {
+                    if (iatOrientationOverlay) return iatOrientationOverlay;
+
+                    iatOrientationOverlay = document.createElement('div');
+                    iatOrientationOverlay.id = 'iat-orientation-overlay';
+                    iatOrientationOverlay.setAttribute('role', 'alert');
+                    iatOrientationOverlay.setAttribute('aria-live', 'assertive');
+                    iatOrientationOverlay.innerHTML = '<div class="iat-orientation-message"><strong>Please rotate your device</strong><span>This task must be completed in landscape mode.</span></div>';
+                    document.body.appendChild(iatOrientationOverlay);
+                    return iatOrientationOverlay;
+                }
+
+                function updateIatOrientation() {
+                    if (!iatOrientationActive || !isTouchDevice()) return;
+
+                    var landscape = isLandscape();
+                    getIatOrientationOverlay().classList.toggle('is-visible', !landscape);
+                    document.body.classList.toggle('iat-orientation-blocked', !landscape);
+
+                    if (landscape && iatOrientationContinue) {
+                        var continueToIat = iatOrientationContinue;
+                        iatOrientationContinue = null;
+                        window.setTimeout(continueToIat, 120);
+                    }
+                }
+
+                function tryIatFullscreenAndLandscape() {
+                    var root = document.documentElement;
+                    var fullscreenPromise = Promise.resolve();
+                    if (!document.fullscreenElement && root.requestFullscreen) {
+                        try {
+                            fullscreenPromise = root.requestFullscreen().catch(function () {});
+                        } catch (error) {}
+                    }
+
+                    fullscreenPromise.then(function () {
+                        if (screen.orientation && screen.orientation.lock) {
+                            try {
+                                screen.orientation.lock('landscape').catch(function () {});
+                            } catch (error) {}
+                        }
+                        window.setTimeout(updateIatOrientation, 100);
+                    });
+                }
+
+                window.prepareIatOrientation = function (event, button) {
+                    if (!isTouchDevice()) return true;
+                    if (button && button.iatOrientationReady) {
+                        button.iatOrientationReady = false;
+                        return true;
+                    }
+
+                    if (event) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+                    }
+
+                    iatOrientationActive = true;
+                    iatOrientationContinue = function () {
+                        if (!button) return;
+                        button.iatOrientationReady = true;
+                        button.click();
+                    };
+                    updateIatOrientation();
+                    tryIatFullscreenAndLandscape();
+                    return false;
+                };
+
+                window.finishIatOrientation = function () {
+                    iatOrientationActive = false;
+                    iatOrientationContinue = null;
+                    document.body.classList.remove('iat-orientation-blocked');
+                    if (iatOrientationOverlay) iatOrientationOverlay.classList.remove('is-visible');
+
+                    if (screen.orientation && screen.orientation.unlock) {
+                        try { screen.orientation.unlock(); } catch (error) {}
+                    }
+                    if (document.fullscreenElement && document.exitFullscreen) {
+                        try { document.exitFullscreen().catch(function () {}); } catch (error) {}
+                    }
+                };
+
+                window.addEventListener('resize', updateIatOrientation);
+                window.addEventListener('orientationchange', function () {
+                    window.setTimeout(updateIatOrientation, 100);
+                });
                 function launchStudy() {
                     blurb.hidden = true;
                     var scriptTag = document.createElement('script');
