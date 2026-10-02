@@ -23,12 +23,14 @@ define(['pipAPI','./iat10lib.js'], function(APIConstructor, iatExtension){
             };
         }
 
-        var horizontalMargin = 24;
-        var verticalMargin = 20;
+        var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        var horizontalMargin = isIOS ? 8 : 24;
+        var verticalMargin = isIOS ? 8 : 20;
         var maxWidth = Math.min(1200, Math.max(320, viewportWidth - horizontalMargin));
         var availableHeight = Math.max(220, viewportHeight - verticalMargin);
         var proportions = Math.min(0.62, availableHeight / maxWidth);
-        proportions = Math.max(0.42, proportions);
+        proportions = Math.max(isIOS ? 0.37 : 0.42, proportions);
 
         return {
             maxWidth: Math.floor(maxWidth),
