@@ -205,7 +205,7 @@ define(['managerAPI',
         item_validation: [{
             type: 'quest',
             name: 'item_validation',
-            scriptUrl: 'item_validation.js',
+            scriptUrl: 'item_validation.js?v=20261005-1',
             pre: function(){ rememberSection('item_validation'); }
         }],
 
@@ -225,7 +225,7 @@ define(['managerAPI',
         IM4: [{
             type: 'quest',
             name: 'IM4',
-            scriptUrl: 'im4.js',
+            scriptUrl: 'im4.js?v=20261005-1',
             pre: function(){ rememberSection('IM4'); }
         }],
 

@@ -23,10 +23,11 @@ define(['questAPI'], function(Quest){
                 '[piq-page] .glyphicon-warning-sign, [piq-page] .glyphicon-exclamation-sign, [piq-page] .text-danger::before, [piq-page] .alert-danger::before, [piq-page] .help-block::before { content: none !important; display: none !important; }',
                 '.im4-scroll-target { outline: 2px solid rgba(201, 48, 44, 0.35); outline-offset: 4px; }',
                 '@media (min-width: 700px) { [piq-page] .im4-matrix-source { display: none !important; } }',
-                '.im4-matrix-shell { margin: 0 0 20px; overflow-x: auto; }',
-                '.im4-matrix { min-width: 680px; border: 1px solid #d7dde3; border-radius: 4px; overflow: hidden; }',
+                '.im4-matrix-shell { margin: 0 0 20px; overflow: visible; }',
+                '.im4-matrix { min-width: 680px; border: 1px solid #d7dde3; border-radius: 4px; overflow: visible; }',
                 '.im4-matrix-header, .im4-matrix-row { display: grid; grid-template-columns: minmax(300px, 2.7fr) repeat(7, minmax(72px, 1fr)); align-items: stretch; }',
-                '.im4-matrix-header { position: sticky; top: 0; z-index: 2; background: #eef5f8; border-bottom: 1px solid #c8d5dc; }',
+                '.im4-matrix-header { position: relative; z-index: 2; background: #eef5f8; border-bottom: 1px solid #c8d5dc; }',
+                '.im4-matrix-header-float { display: none; position: fixed !important; top: 0; z-index: 1000; box-sizing: border-box; }',
                 '.im4-matrix-heading, .im4-matrix-column, .im4-matrix-question { padding: 12px 10px; }',
                 '.im4-matrix-heading { font-weight: 700; }',
                 '.im4-matrix-column { display: flex; align-items: center; justify-content: center; min-height: 70px; text-align: center; line-height: 1.2; font-size: 0.92em; }',
@@ -195,8 +196,70 @@ define(['questAPI'], function(Quest){
             });
         }
 
+        function installFloatingMatrixHeader(shell, matrix, header){
+            var floating = header.cloneNode(true);
+            var visualViewport = window.visualViewport;
+            floating.classList.add('im4-matrix-header-float');
+            floating.setAttribute('aria-hidden', 'true');
+            document.body.appendChild(floating);
+
+            var pollTimer = window.setInterval(update, 100);
+
+            function removeListeners(){
+                window.clearInterval(pollTimer);
+                window.removeEventListener('scroll', update, true);
+                document.removeEventListener('scroll', update, true);
+                window.removeEventListener('resize', update);
+                window.removeEventListener('touchmove', update);
+                window.removeEventListener('touchend', update);
+                if (visualViewport) {
+                    visualViewport.removeEventListener('scroll', update);
+                    visualViewport.removeEventListener('resize', update);
+                }
+            }
+
+            function update(){
+                if (!document.body.contains(shell)) {
+                    removeListeners();
+                    if (floating.parentNode) floating.parentNode.removeChild(floating);
+                    return;
+                }
+
+                var rect = matrix.getBoundingClientRect();
+                var originalHeaderRect = header.getBoundingClientRect();
+                var fixedTop = 0;
+                var headerHeight = originalHeaderRect.height || floating.getBoundingClientRect().height;
+                var visible = window.matchMedia('(min-width: 700px)').matches && originalHeaderRect.bottom <= fixedTop && rect.bottom > fixedTop + headerHeight;
+                if (!visible) {
+                    floating.style.display = 'none';
+                    return;
+                }
+
+                floating.style.display = 'grid';
+                floating.style.top = fixedTop + 'px';
+                floating.style.left = rect.left + 'px';
+                floating.style.width = rect.width + 'px';
+                floating.style.gridTemplateColumns = window.getComputedStyle(header).gridTemplateColumns;
+            }
+
+            shell._removeFloatingHeader = function(){
+                removeListeners();
+                if (floating.parentNode) floating.parentNode.removeChild(floating);
+            };
+            window.addEventListener('scroll', update, true);
+            document.addEventListener('scroll', update, true);
+            window.addEventListener('resize', update);
+            window.addEventListener('touchmove', update, {passive: true});
+            window.addEventListener('touchend', update, {passive: true});
+            if (visualViewport) {
+                visualViewport.addEventListener('scroll', update, {passive: true});
+                visualViewport.addEventListener('resize', update, {passive: true});
+            }
+            update();
+        }
         function removeMatrix(page){
             var shell = page.querySelector('.im4-matrix-shell');
+            if (shell && shell._removeFloatingHeader) shell._removeFloatingHeader();
             if (shell && shell.parentNode) shell.parentNode.removeChild(shell);
             var sources = page.querySelectorAll('.im4-matrix-source');
             Array.prototype.forEach.call(sources, function(source){ source.classList.remove('im4-matrix-source'); });
@@ -283,6 +346,7 @@ define(['questAPI'], function(Quest){
 
             shell.appendChild(matrix);
             rows[0].container.parentNode.insertBefore(shell, rows[0].container);
+            installFloatingMatrixHeader(shell, matrix, header);
             syncMatrixSelections(page);
         }
         function watchSelectedOptions(){
