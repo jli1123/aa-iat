@@ -242,7 +242,7 @@ define(['managerAPI',
         debriefing: [{
             type: 'message',
             name: 'debriefing',
-            templateUrl: 'debriefing.jst',
+            templateUrl: 'debriefing.jst?v=20261005-1',
             title: 'Deception Debriefing Form',
             header: 'Deception Debriefing Form',
             pre: function(){ rememberSection('debriefing'); }
