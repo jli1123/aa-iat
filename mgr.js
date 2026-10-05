@@ -122,7 +122,7 @@ define(['managerAPI',
         demographics: [{
             type: 'quest',
             name: 'demographics',
-            scriptUrl: 'demographics.js',
+            scriptUrl: 'demographics.js?v=20261005-1',
             pre: function(){ rememberSection('demographics'); }
         }],
 

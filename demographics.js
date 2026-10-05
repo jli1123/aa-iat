@@ -66,7 +66,6 @@ define(['questAPI'], function(Quest){
 
         var questionStems = [
             'Please enter your name.',
-            'Please enter your email address. If you are eligible for and complete the study, this email will be used to enter you into the raffle for a $20 Amazon gift card.',
             'Are you currently a student studying education?',
             'Are you an undergraduate or graduate student?',
             'Please select your year of study.',
@@ -81,7 +80,8 @@ define(['questAPI'], function(Quest){
             'Please enter your race.',
             'Please select your ethnicity.',
             'Are you able to read and understand English?',
-            'Do you have access to a device to complete this study?'
+            'Are you able to complete this study on a personal device?',
+            'Please enter your email to receive a $5 Amazon gift card upon completion of the study (Please note that you must be eligible for and complete the study to earn the gift card):'
         ];
 
         var raceOptionTexts = [
@@ -442,7 +442,7 @@ define(['questAPI'], function(Quest){
             if (optionSelectedInQuestion('Are you able to read and understand English?', 'No')){
                 reasons.push('cannot_read_understand_english');
             }
-            if (optionSelectedInQuestion('Do you have access to a device to complete this study?', 'No')){
+            if (optionSelectedInQuestion('Are you able to complete this study on a personal device?', 'No')){
                 reasons.push('no_study_device');
             }
 
@@ -787,7 +787,7 @@ define(['questAPI'], function(Quest){
                 });
             }
 
-            var emailStem = findStemElement('Please enter your email address. If you are eligible for and complete the study, this email will be used to enter you into the raffle for a $20 Amazon gift card.');
+            var emailStem = findStemElement('Please enter your email to receive a $5 Amazon gift card upon completion of the study (Please note that you must be eligible for and complete the study to earn the gift card):');
             var emailContainer = emailStem ? findQuestionContainer(emailStem) : null;
             if (emailContainer){
                 var emailInputs = emailContainer.querySelectorAll('input:not([type="hidden"])');
@@ -1094,7 +1094,7 @@ define(['questAPI'], function(Quest){
     API.addQuestionsSet('participantEmail',{
         inherit: 'demographicsText',
         name: 'email',
-        stem: 'Please enter your email address. If you are eligible for and complete the study, this email will be used to enter you into the raffle for a $20 Amazon gift card.',
+        stem: 'Please enter your email to receive a $5 Amazon gift card upon completion of the study (Please note that you must be eligible for and complete the study to earn the gift card):',
         inputType: 'email',
         maxLength: 254,
         errorMsg: {
@@ -1261,7 +1261,7 @@ define(['questAPI'], function(Quest){
     API.addQuestionsSet('studyDeviceAccess',{
         inherit: 'demographicsSelect',
         name: 'study_device_access',
-        stem: 'Do you have access to a device to complete this study?',
+        stem: 'Are you able to complete this study on a personal device?',
         answers: [
             {text: 'Yes', value: 'yes'},
             {text: 'No', value: 'no'}
@@ -1273,7 +1273,6 @@ define(['questAPI'], function(Quest){
         inherit: 'demographicsPage',
         questions: [
             {inherit: 'participantName'},
-            {inherit: 'participantEmail'},
             {inherit: 'educationStudent'},
             {inherit: 'studentLevel'},
             {inherit: 'yearOfStudy'},
@@ -1288,7 +1287,8 @@ define(['questAPI'], function(Quest){
             {inherit: 'raceOther'},
             {inherit: 'ethnicity'},
             {inherit: 'englishComprehension'},
-            {inherit: 'studyDeviceAccess'}
+            {inherit: 'studyDeviceAccess'},
+            {inherit: 'participantEmail'}
         ]
     }]);
 
