@@ -144,7 +144,7 @@ define(['managerAPI',
         consent: [{
             inherit: 'instructions',
             name: 'consent',
-            templateUrl: 'consent.jst',
+            templateUrl: 'consent.jst?v=20261005-2',
             title: 'Consent',
             header: 'Consent to Participate',
             pre: function(){ rememberSection('consent'); }

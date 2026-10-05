@@ -63,8 +63,20 @@
         margin-bottom: 1em;
     }
 
-    .consent-meta p {
-        margin-bottom: 0.35em;
+    .consent-meta-row {
+        display: grid;
+        grid-template-columns: minmax(190px, max-content) minmax(0, 1fr);
+        column-gap: 18px;
+        margin-bottom: 0.45em;
+        align-items: start;
+    }
+
+    .consent-meta-label {
+        font-weight: 700;
+    }
+
+    .consent-meta-details {
+        min-width: 0;
     }
 
     .consent-meta-rule {
@@ -84,6 +96,12 @@
     }
 
     @media (max-width: 600px) {
+        .consent-meta-row {
+            grid-template-columns: 1fr;
+            row-gap: 0.1em;
+            margin-bottom: 0.8em;
+        }
+
         .consent-actions .btn {
             display: block;
             width: 100%;
@@ -102,17 +120,30 @@
     <div class="panel-body">
         <div class="consent-content">
             <div class="consent-meta">
-                <p><strong>Title of Research Study:</strong> Student Teacher Judgements about Child Learner Traits</p>
-                <p><strong>Principal Investigator:</strong> Anna Workman, M.Phil.<br>Doctoral Candidate, Clinical Psychology<br>Department of Psychology<br>The City College of the City University of New York</p>
-                <p><strong>Faculty Advisor:</strong> Sarah O&rsquo;Neill, Ph.D.<br>Associate Professor<br>Department of Psychology<br>The City College of the City University of New York</p>
-                <p><strong>Research Sponsor:</strong> Colin Powell Graduate Fellowship</p>
+                <div class="consent-meta-row">
+                    <div class="consent-meta-label">Title of Research Study:</div>
+                    <div class="consent-meta-details">Student Teacher Judgements about Child Learner Traits</div>
+                </div>
+                <div class="consent-meta-row">
+                    <div class="consent-meta-label">Principal Investigator:</div>
+                    <div class="consent-meta-details">Anna Workman, M.Phil.<br>Doctoral Candidate, Clinical Psychology<br>Department of Psychology<br>The City College of the City University of New York</div>
+                </div>
+                <div class="consent-meta-row">
+                    <div class="consent-meta-label">Faculty Advisor:</div>
+                    <div class="consent-meta-details">Sarah O&rsquo;Neill, Ph.D.<br>Associate Professor<br>Department of Psychology<br>The City College of the City University of New York</div>
+                </div>
+                <div class="consent-meta-row">
+                    <div class="consent-meta-label">Research Sponsor:</div>
+                    <div class="consent-meta-details">Colin Powell Graduate Fellowship</div>
+                </div>
                 <hr class="consent-meta-rule">
             </div>
 
             <h3>Overview</h3>
             <ul>
                 <li>You are being asked to join a research study. This form gives you important information that will help you decide whether or not to take part. It describes what would happen to you in the study, and helps you understand the reasons why you might or might not want to participate.</li>
-                <li>To participate, you must be 18-65 years old, be a current undergraduate or graduate student studying education in the Northeast, able to read and understand English fluently, and have access to a device with a keyboard that is connected to Wi-Fi.</li>
+                <li>To participate, you must be 18-65 years old, be a current undergraduate or graduate student studying education in the Northeast, able to read and understand English fluently, and have access to a device that is connected to Wi-Fi.</li>
+                <li>Approximately 330 individuals are expected to participate in the study.</li>
                 <li>We cannot tell you every detail of this study ahead of time, but if you are willing to participate under these conditions, we will explain the procedure to you fully after your participation.</li>
             </ul>
 
@@ -124,7 +155,8 @@
             <ul>
                 <li>You will be asked to complete a couple of questionnaires, which will take approximately 3 minutes.</li>
                 <li>You will then be asked to complete a computerized task, which will take approximately 7 minutes, where you will be asked to respond as fast as possible to stimuli that pop up on the screen.</li>
-                <li>This study occurs online. You may complete the study at any time you choose, but you will need to use a computer connected to a keyboard. We also highly encourage you to find a quiet and private place to complete the study over a secure Wi-Fi connection.</li>
+                <li>This study occurs online and you may complete the study at any time you choose. We also highly encourage you to find a quiet and private place to complete the study over a secure Wi-Fi connection.</li>
+                <li>You will be asked to provide your email address. If you do not complete the survey within 1 week of starting it, we will email you to remind you to do so. We will send you up to three emails, each spaced 1 week apart. If there is no response to the third email, we will take that to mean you do not wish to complete the survey. No more than three reminder emails will be sent to you over the course of this study.</li>
             </ul>
 
             <h3>Time Commitment</h3>
@@ -159,7 +191,7 @@
 
             <h3>Payment for Participation</h3>
             <ul>
-                <li>Eligible participants who complete all study procedures will be entered into a raffle to win a $20 Amazon gift. You will have a one in thirty chance of winning the raffle prize. If you win the raffle prize, you will receive a $20 Amazon gift card via email within one week of winning. The gift card will be emailed to the address you provide. If you do not complete all parts of the study, you will not be entered into the raffle and will not have a chance of being compensated.</li>
+                <li>Eligible participants who complete all study procedures will receive a $5 Amazon gift card via email within one week of completing the study. The gift card will be emailed to the address you provide. If you do not complete all parts of the study, you will not be compensated.</li>
             </ul>
 
             <h3>New Information</h3>
