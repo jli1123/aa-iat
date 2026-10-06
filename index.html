@@ -6,10 +6,18 @@
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>Teacher Judgements about Students’ Behaviors – Study Blurb</title>
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/minnojs/minno-quest@0.3/dist/main.css" />
+        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&amp;onload=onTurnstileLoad" defer onerror="window.onTurnstileLoadError &amp;&amp; window.onTurnstileLoadError();"></script>
         <style>
             body { background: #fff; color: #333; }
             .container { padding-top: 15px; }
             .study-blurb { max-width: 900px; margin: 0 auto; padding: 15px; }
+            .human-verification { max-width: 700px; margin: 8vh auto; padding: 15px; }
+            .human-verification__body { padding: 28px; text-align: center; }
+            .human-verification__body p { margin: 0 0 1.4em; font-size: 1.2em; line-height: 1.5; }
+            .human-verification__widget { width: 100%; min-height: 70px; display: flex; justify-content: center; align-items: center; }
+            .human-verification__status { min-height: 1.5em; margin: 1em 0 0; font-size: 1em; line-height: 1.4; color: #555; }
+            .human-verification__status.is-error { color: #c9302c; }
+            .human-verification__retry { margin-top: 0.75em; }
             .study-blurb__heading { margin: 0; font-size: 2em; line-height: 1.25; }
             .study-blurb__subtitle { display: block; margin-top: 0.2em; font-size: 0.72em; }
             .study-blurb__body { font-size: 1.15em; line-height: 1.55; }
@@ -37,6 +45,9 @@
                 .panel { max-width: 100%; margin-left: 0; margin-right: 0; }
                 .panel-body { padding: 12px; }
                 .study-blurb { width: 100%; padding: 8px; }
+                .human-verification { width: 100%; margin: 4vh auto; padding: 8px; }
+                .human-verification__body { padding: 20px 12px; }
+                .human-verification__body p { font-size: 1em; }
                 .study-blurb__heading { font-size: 1.55em; }
                 .study-blurb__body { font-size: 1em; }
                 .exit-message { width: 100%; margin: 5vh auto; padding: 8px; }
@@ -57,7 +68,18 @@
 		</style>
     </head>
     <body>
-            <main id="study-blurb" class="study-blurb">
+        <main id="human-verification" class="human-verification" hidden>
+            <div class="panel panel-info">
+                <div class="panel-body human-verification__body">
+                    <p>Please complete the verification below to continue.</p>
+                    <div id="turnstile-widget" class="human-verification__widget"></div>
+                    <div id="turnstile-status" class="human-verification__status" role="status" aria-live="polite"></div>
+                    <button id="turnstile-retry" class="btn btn-primary human-verification__retry" type="button" hidden>Try Again</button>
+                </div>
+            </div>
+        </main>
+
+            <main id="study-blurb" class="study-blurb" hidden>
             <div class="panel panel-info">
                 <div class="panel-heading">
                     <h1 class="panel-title study-blurb__heading">
@@ -110,11 +132,21 @@
                 var currentSectionKey = 'iat_current_section';
                 var form = document.getElementById('study-blurb-form');
                 var blurb = document.getElementById('study-blurb');
+                var verificationPage = document.getElementById('human-verification');
+                var verificationStatus = document.getElementById('turnstile-status');
+                var verificationRetry = document.getElementById('turnstile-retry');
                 var exitPage = document.getElementById('exit-page');
                 var exitPageMessage = document.getElementById('exit-page-message');
                 var defaultExitMessage = 'Thank you for your time and interest in this study. You may now close this browser window.';
                 var screeningExitMessage = 'Thank you so much for taking part in our study! Unfortunately, you do not meet criteria for the study, but we thank you for your interest and your time.';
                 var alreadyCompletedMessage = 'Thank you. You have already completed this study.';
+                var botVerificationKey = 'iat_bot_verified';
+                var turnstileSiteKey = '0x4AAAAAAFPAQ_MIzmeh1vA1';
+                var turnstileWorkerUrl = 'https://aa-iat-turnstile-verify.rain0420ing.workers.dev/';
+                var turnstileWidgetId = null;
+                var verificationInFlight = false;
+                var initializationStarted = false;
+                var participantId = null;
 
                 function createParticipantId() {
                     if (window.crypto && window.crypto.randomUUID) return window.crypto.randomUUID();
@@ -138,11 +170,14 @@
                     }
                 }
 
-                var participantId = getOrCreateParticipantId();
-                window.iatParticipantId = participantId;
-                window.getIatParticipantId = function () {
+                function initializeParticipantId() {
+                    if (!participantId) participantId = getOrCreateParticipantId();
+                    window.iatParticipantId = participantId;
+                    window.getIatParticipantId = function () {
+                        return participantId;
+                    };
                     return participantId;
-                };
+                }
 
                 function getStudyStatus() {
                     try {
@@ -171,6 +206,7 @@
 
                 function showExitPage(message) {
                     blurb.hidden = true;
+                    verificationPage.hidden = true;
                     if (exitPageMessage) exitPageMessage.textContent = message || defaultExitMessage;
                     exitPage.hidden = false;
                     document.title = 'Thank You';
@@ -187,6 +223,121 @@
                     window.showStudyExitPage(screeningExitMessage);
                 };
 
+                function isBotVerified() {
+                    try {
+                        return sessionStorage.getItem(botVerificationKey) === 'true';
+                    } catch (error) {
+                        return false;
+                    }
+                }
+
+                function setVerificationStatus(message, isError) {
+                    verificationStatus.textContent = message || '';
+                    verificationStatus.classList.toggle('is-error', Boolean(isError));
+                }
+
+                function resetTurnstileWidget() {
+                    verificationInFlight = false;
+                    verificationRetry.hidden = true;
+                    setVerificationStatus('', false);
+                    if (window.turnstile && turnstileWidgetId !== null) {
+                        try { window.turnstile.reset(turnstileWidgetId); } catch (error) {}
+                    }
+                }
+
+                function verificationFailed(message) {
+                    verificationInFlight = false;
+                    setVerificationStatus(message || 'Verification was unsuccessful. Please try again.', true);
+                    verificationRetry.hidden = false;
+                }
+
+                verificationRetry.addEventListener('click', resetTurnstileWidget);
+
+                function verifyTurnstileToken(token) {
+                    if (verificationInFlight || isBotVerified()) return;
+                    if (!token || typeof token !== 'string') {
+                        verificationFailed();
+                        return;
+                    }
+
+                    verificationInFlight = true;
+                    setVerificationStatus('Verifying...', false);
+                    var controller = window.AbortController ? new window.AbortController() : null;
+                    var requestTimeout = window.setTimeout(function () {
+                        if (controller) controller.abort();
+                    }, 12000);
+                    var requestOptions = {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({token: token})
+                    };
+                    if (controller) requestOptions.signal = controller.signal;
+
+                    fetch(turnstileWorkerUrl, requestOptions).then(function (response) {
+                        if (!response.ok) throw new Error('Verification request failed');
+                        return response.json();
+                    }).then(function (result) {
+                        if (!result || result.success !== true) throw new Error('Verification rejected');
+                        window.clearTimeout(requestTimeout);
+                        sessionStorage.setItem(botVerificationKey, 'true');
+                        verificationInFlight = false;
+                        setVerificationStatus('', false);
+                        verificationPage.hidden = true;
+                        if (window.turnstile && turnstileWidgetId !== null) {
+                            try { window.turnstile.remove(turnstileWidgetId); } catch (error) {}
+                            turnstileWidgetId = null;
+                        }
+                        continueStudyInitialization();
+                    }).catch(function () {
+                        window.clearTimeout(requestTimeout);
+                        verificationFailed();
+                    });
+                }
+
+                function renderTurnstileWidget() {
+                    if (verificationPage.hidden || isBotVerified() || turnstileWidgetId !== null) return;
+                    if (!window.turnstile || typeof window.turnstile.render !== 'function') return;
+
+                    try {
+                        turnstileWidgetId = window.turnstile.render('#turnstile-widget', {
+                            sitekey: turnstileSiteKey,
+                            theme: 'light',
+                            size: 'flexible',
+                            callback: verifyTurnstileToken,
+                            'expired-callback': function () {
+                                verificationFailed('Verification expired. Please try again.');
+                            },
+                            'error-callback': function () {
+                                verificationFailed();
+                                return true;
+                            },
+                            'timeout-callback': function () {
+                                verificationFailed();
+                            }
+                        });
+                    } catch (error) {
+                        setVerificationStatus('Verification is temporarily unavailable. Please try again.', true);
+                    }
+                }
+
+                function showVerificationGate() {
+                    blurb.hidden = true;
+                    exitPage.hidden = true;
+                    verificationPage.hidden = false;
+                    document.title = 'Human Verification';
+                    setVerificationStatus('', false);
+                    renderTurnstileWidget();
+                }
+
+                window.onTurnstileLoad = function () {
+                    renderTurnstileWidget();
+                };
+
+                window.onTurnstileLoadError = function () {
+                    if (!verificationPage.hidden && !isBotVerified()) {
+                        setVerificationStatus('Verification is temporarily unavailable. Please try again.', true);
+                    }
+                };
                 var iatOrientationActive = false;
                 var iatOrientationContinue = null;
                 var iatOrientationOverlay = null;
@@ -357,6 +508,7 @@
                 });
                 function launchStudy() {
                     blurb.hidden = true;
+                    verificationPage.hidden = true;
                     var scriptTag = document.createElement('script');
                     scriptTag.src = 'https://cdn.jsdelivr.net/gh/minnojs/minno-quest@0.3/dist/pi-minno.js';
                     scriptTag.onload = function () {
@@ -372,45 +524,64 @@
                     document.head.appendChild(scriptTag);
                 }
 
+                function continueStudyInitialization() {
+                    if (initializationStarted) return;
+                    initializationStarted = true;
+                    initializeParticipantId();
+                    verificationPage.hidden = true;
+
+                    if (getCurrentSection()) {
+                        restoreStoredBlurbData();
+                        launchStudy();
+                        return;
+                    }
+
+                    if (
+                        sessionStorage.getItem(responseKey) === 'no' ||
+                        sessionStorage.getItem(consentResponseKey) === 'no' ||
+                        sessionStorage.getItem(demographicsScreeningKey) === 'ineligible'
+                    ) {
+                        showExitPage(
+                            sessionStorage.getItem(demographicsScreeningKey) === 'ineligible'
+                                ? screeningExitMessage
+                                : defaultExitMessage
+                        );
+                        return;
+                    }
+
+                    blurb.hidden = false;
+                    document.title = 'Study Blurb';
+                    if (!form.getAttribute('data-submit-ready')) {
+                        form.setAttribute('data-submit-ready', 'true');
+                        form.addEventListener('submit', function (event) {
+                            event.preventDefault();
+                            var answer = form.elements[responseKey].value;
+                            var responseTimestamp = new Date().toISOString();
+                            sessionStorage.setItem(responseKey, answer);
+                            sessionStorage.setItem(responseTimestampKey, responseTimestamp);
+                            if (answer === 'yes') {
+                                try {
+                                    localStorage.setItem(responseKey, answer);
+                                    localStorage.setItem(responseTimestampKey, responseTimestamp);
+                                } catch (error) {}
+                                launchStudy();
+                            } else {
+                                showExitPage();
+                            }
+                        });
+                    }
+                }
+
                 if (getStudyStatus() === 'completed') {
                     showExitPage(alreadyCompletedMessage);
                     return;
                 }
 
-                if (getCurrentSection()) {
-                    restoreStoredBlurbData();
-                    launchStudy();
-                    return;
+                if (isBotVerified()) {
+                    continueStudyInitialization();
+                } else {
+                    showVerificationGate();
                 }
-
-                if (
-                    sessionStorage.getItem(responseKey) === 'no' ||
-                    sessionStorage.getItem(consentResponseKey) === 'no' ||
-                    sessionStorage.getItem(demographicsScreeningKey) === 'ineligible'
-                ) {
-                    showExitPage(
-                        sessionStorage.getItem(demographicsScreeningKey) === 'ineligible'
-                            ? screeningExitMessage
-                            : defaultExitMessage
-                    );
-                    return;
-                }
-
-                form.addEventListener('submit', function (event) {
-                    event.preventDefault();
-                    var answer = form.elements[responseKey].value;
-                    var responseTimestamp = new Date().toISOString();
-                    sessionStorage.setItem(responseKey, answer);
-                    sessionStorage.setItem(responseTimestampKey, responseTimestamp);
-                    if (answer === 'yes') {
-                        try {
-                            localStorage.setItem(responseKey, answer);
-                            localStorage.setItem(responseTimestampKey, responseTimestamp);
-                        } catch (error) {}
-                        launchStudy();
-                    }
-                    else showExitPage();
-                });
             }());
         </script>
 	</body>
